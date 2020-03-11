@@ -154,10 +154,12 @@ bool isSkipFuncs(char* funcName){
 
 // instrument at  
 bool instBB(BPatch_binaryEdit * appBin, BPatch_function * instFunc, BPatch_point * instrumentPoint, 
-                        u16 block_id){
+                        u16 block_id, u64 bb_addr){
     vector<BPatch_snippet *> cond_args;
     BPatch_constExpr CondID(block_id);
     cond_args.push_back(&CondID);
+    BPatch_constExpr BBAddr(bb_addr);
+    cond_args.push_back(&BBAddr);
     
 
     BPatch_funcCallExpr instCondExpr(*instFunc, cond_args);
@@ -200,7 +202,7 @@ bool bbInstrument(BPatch_binaryEdit * appBin, BPatch_image *appImage,
         vector<pair<Dyninst::InstructionAPI::Instruction, Dyninst::Address> > insns;
         block->getInstructions(insns);
 
-        //Dyninst::Address addr = insns.back().second;  //addr: equal to offset when it's binary rewrite
+        Dyninst::Address addr = insns.back().second;  //addr: equal to offset when it's binary rewrite
         Dyninst::InstructionAPI::Instruction insn = insns.back().first; 
         Dyninst::InstructionAPI::Operation op = insn.getOperation();
         //Dyninst::InstructionAPI::InsnCategory category = insn.getCategory();
@@ -212,7 +214,7 @@ bool bbInstrument(BPatch_binaryEdit * appBin, BPatch_image *appImage,
 
         block_id = rand() % USHRT_MAX;  // USHRT_MAX = (1<<16)
       
-        if (!instBB(appBin, CallbackBB, bbEntry, block_id)) cout << "fail at block addr: 0x"<<hex << bb_addr << endl;
+        if (!instBB(appBin, CallbackBB, bbEntry, block_id, addr)) cout << "fail at block addr: 0x"<<hex << bb_addr << endl;
         
 
     }
@@ -294,7 +296,7 @@ int main (int argc, char **argv){
         BPatch_function *curFunc = *funcIter;
         char funcName[1024];
         curFunc->getName (funcName, 1024);
-        if(isSkipFuncs(funcName)) continue;
+        //if(isSkipFuncs(funcName)) continue;
         //instrument at edges
         if (!bbInstrument(appBin, appImage, funcIter, funcName)) {
             cout << "fail to instrument function: " << funcName << endl;
